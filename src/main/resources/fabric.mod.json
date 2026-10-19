@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "mc_audio_share",
+  "version": "${version}",
+  "name": "MC Audio Share",
+  "description": "Share Windows system or application audio through Simple Voice Chat.",
+  "authors": ["Codex"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["cn.codex.minecraft.audioshare.AudioShareClient"],
+    "voicechat": ["cn.codex.minecraft.audioshare.AudioSharePlugin"]
+  },
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": ">=${fabric_version}",
+    "minecraft": "${minecraft_dependency}",
+    "java": ">=${java_version}",
+    "voicechat_api": ">=${voicechat_api_version}"
+  }
+}

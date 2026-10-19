@@ -1,0 +1,65 @@
+plugins {
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+base { archivesName = archives_base_name }
+version = mod_version
+group = maven_group
+
+sourceSets {
+    main {
+        java.srcDirs '../../src/main/java'
+        resources.srcDir '../../src/main/resources'
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://maven.maxhenkel.de/repository/public' }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
+    implementation "de.maxhenkel.voicechat:voicechat-api:${voicechat_api_version}"
+}
+
+processResources {
+    inputs.property 'version', version
+    filesMatching('fabric.mod.json') {
+        expand version: mod_version,
+                java_version: java_version,
+                minecraft_dependency: minecraft_dependency,
+                loader_version: loader_version,
+                fabric_version: fabric_version,
+                voicechat_api_version: voicechat_api_version
+    }
+}
+
+tasks.withType(JavaCompile).configureEach { options.release = java_version as int }
+
+// Repackage the remapped Chinese JAR with English-only UI and keybinding text.
+tasks.register('englishJar', Jar) {
+    dependsOn remapJar
+    archiveClassifier = 'en'
+    from({ zipTree(tasks.remapJar.archiveFile.get().asFile) }) {
+        exclude 'mc_audio_share_text.properties'
+        exclude 'assets/mc_audio_share/lang/zh_cn.json'
+    }
+    from('../../src/english/resources')
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+java {
+    sourceCompatibility = JavaVersion.toVersion(java_version as int)
+    targetCompatibility = JavaVersion.toVersion(java_version as int)
+}
+
+// Gradle 9.5 can attempt to snapshot Loom's transient .part downloads after an
+// interrupted asset fetch. Assets are an external cache and should not be tracked.
+tasks.configureEach {
+    if (name == 'downloadAssets') {
+        doNotTrackState('Loom manages and verifies the Minecraft asset cache itself')
+    }
+}

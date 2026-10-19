@@ -1,0 +1,22 @@
+# Gradle and IDE output
+.gradle/
+**/.gradle/
+build/
+**/build/
+.idea/
+.vscode/
+*.iml
+
+# Local game and diagnostic files
+run/
+**/run/
+logs/
+crash-reports/
+*.log
+*.hprof
+
+# OS and temporary files
+.DS_Store
+Thumbs.db
+*.tmp
+*.bak

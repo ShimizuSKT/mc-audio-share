@@ -31,6 +31,7 @@ public final class AudioShareHud {
         int width = client.getWindow().getGuiScaledWidth();
         int height = client.getWindow().getGuiScaledHeight();
         VoicechatHudLayout.Settings settings = VOICECHAT_HUD.read();
+        if (!settings.visible()) return;
         int iconSize = Math.max(4, (int) Math.round(16D * settings.scale()));
         // SVC anchors negative coordinates to the right/bottom of the GUI.
         // Keep its own icon untouched, then place ours immediately to its right.
@@ -48,12 +49,14 @@ public final class AudioShareHud {
      * the icons aligned even when the user moves/scales the SVC icon.
      */
     private static final class VoicechatHudLayout {
-        private record Settings(int x, int y, double scale) { }
+        private record Settings(int x, int y, double scale, boolean visible) { }
 
         private Field configField;
         private Field xField;
         private Field yField;
         private Field scaleField;
+        private Field showHudIconsField;
+        private Field hideIconsField;
         private Method getMethod;
         private boolean unavailable;
 
@@ -68,26 +71,30 @@ public final class AudioShareHud {
                 xField = configClass.getField("hudIconPosX");
                 yField = configClass.getField("hudIconPosY");
                 scaleField = configClass.getField("hudIconScale");
+                showHudIconsField = configClass.getField("showHudIcons");
+                hideIconsField = configClass.getField("hideIcons");
                 getMethod = entryClass.getMethod("get");
                 return true;
             } catch (ReflectiveOperationException | LinkageError error) {
                 unavailable = true;
-                AudioShareClient.LOGGER.warn("Cannot read Simple Voice Chat HUD layout; using its default position", error);
+                AudioShareClient.LOGGER.warn("Cannot read Simple Voice Chat HUD settings; using defaults", error);
                 return false;
             }
         }
 
         Settings read() {
-            if (!resolve()) return new Settings(16, -16, 1D);
+            if (!resolve()) return new Settings(16, -16, 1D, true);
             try {
                 Object config = configField.get(null);
-                if (config == null) return new Settings(16, -16, 1D);
+                if (config == null) return new Settings(16, -16, 1D, true);
                 int x = ((Number) getMethod.invoke(xField.get(config))).intValue();
                 int y = ((Number) getMethod.invoke(yField.get(config))).intValue();
                 double scale = ((Number) getMethod.invoke(scaleField.get(config))).doubleValue();
-                return new Settings(x, y, scale);
+                boolean visible = (Boolean) getMethod.invoke(showHudIconsField.get(config))
+                        && !(Boolean) getMethod.invoke(hideIconsField.get(config));
+                return new Settings(x, y, scale, visible);
             } catch (ReflectiveOperationException error) {
-                return new Settings(16, -16, 1D);
+                return new Settings(16, -16, 1D, true);
             }
         }
     }

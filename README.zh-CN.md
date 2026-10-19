@@ -1,6 +1,6 @@
 # MC Audio Share（Fabric 26.2，Windows 实验版）
 
-在游戏中按 J，选择“全部系统声音”或筛选、切换到一个指定程序，调整分享音量后点击开始。分享声音通过 Simple Voice Chat 的 `MergeClientSoundEvent` 混入麦克风帧，玩家说话和分享声音可同时存在；不启动独立进程，也不需要额外服务器插件。关闭设置界面不会停止分享。
+在游戏中按反斜杠（\\）打开界面，选择“全部系统声音”或筛选、切换到一个指定程序，调整分享音量后点击开始。按 F8 可快速开启或停止分享上次使用的音源；首次使用时默认分享除 Minecraft 外的系统声音。两个按键都能在游戏键位设置中修改。分享声音通过 Simple Voice Chat 的 `MergeClientSoundEvent` 混入麦克风帧，玩家说话和分享声音可同时存在；不启动独立进程，也不需要额外服务器插件。关闭设置界面不会停止分享。
 
 仅支持 Windows x64，最低 Windows 10 Build 20348。系统声音采集使用 Windows WASAPI Process Loopback。全部声音模式排除 Minecraft 进程及子进程，避免游戏内回声。指定程序模式包含目标程序及其子进程。macOS 还未实现。
 
@@ -16,4 +16,6 @@ v0.1.3 修正了上述方向和贴图裁切错误：不再更改 Simple Voice Ch
 
 v0.1.4 使用新的共享/停止共享图标，并提供中文与英文两个独立 JAR。两者的模组 ID 都是 `mc_audio_share`，安装时只能选一个，不能同时放入 `mods` 文件夹。英文版固定使用英文界面文案，并且不包含中文键位翻译；中文版使用中文界面文案。
 
-本次仅做编译和打包检查，不进入游戏环境测试。当前工作环境的 Gradle Loom 在写入 Minecraft 缓存 JAR 时遇到 Windows `AccessDeniedException`，0.1.4 交付 JAR 是以已缓存的 26.2 依赖直接编译 Java，并封装仓库自带 DLL。请按实际游戏测试结果反馈。
+v0.1.5 将打开界面的默认按键改为反斜杠（\\），增加默认 F8 的快速分享按键。共享状态图标遵循 Simple Voice Chat 的“显示 HUD 图标”和“隐藏图标”设置，无需在本模组界面再设一个显示开关。
+
+本次仅做编译和打包检查，不进入游戏环境测试。当前工作环境的 Gradle Loom 在写入 Minecraft 缓存 JAR 时遇到 Windows `AccessDeniedException`，交付 JAR 是以已缓存的 26.2 依赖直接编译 Java，并封装仓库自带 DLL。请按实际游戏测试结果反馈。

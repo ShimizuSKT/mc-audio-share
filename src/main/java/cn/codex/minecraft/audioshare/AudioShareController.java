@@ -18,9 +18,14 @@ public final class AudioShareController {
     private final AtomicLong mergedFrames = new AtomicLong();
     private final AtomicLong droppedFrames = new AtomicLong();
     private volatile long lastAudibleAt;
+    private volatile int lastSourcePid = (int) ProcessHandle.current().pid();
+    private volatile boolean lastExcludeMinecraft = true;
+    private boolean restartWhenStopped;
 
     public synchronized void start(int pid, boolean excludeMinecraft) {
         if (worker != null) return;
+        lastSourcePid = pid;
+        lastExcludeMinecraft = excludeMinecraft;
         capturedFrames.set(0);
         audibleFrames.set(0);
         mergedFrames.set(0);
@@ -44,7 +49,13 @@ public final class AudioShareController {
             } finally {
                 active = false;
                 synchronized (frames) { frames.clear(); }
-                worker = null;
+                synchronized (AudioShareController.this) {
+                    worker = null;
+                    if (restartWhenStopped) {
+                        restartWhenStopped = false;
+                        start(lastSourcePid, lastExcludeMinecraft);
+                    }
+                }
             }
         }, "MC Audio Share Capture");
         worker.setDaemon(true);
@@ -58,6 +69,18 @@ public final class AudioShareController {
         statusKey = "status.stopped";
         statusDetail = null;
         level = 0;
+    }
+
+    public synchronized void toggleQuick() {
+        if (active()) {
+            stop();
+        } else if (worker != null) {
+            // A second key press while the native capture is stopping should
+            // restart it once the old capture thread has exited.
+            restartWhenStopped = !restartWhenStopped;
+        } else {
+            start(lastSourcePid, lastExcludeMinecraft);
+        }
     }
 
     void accept(short[] input) {

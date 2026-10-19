@@ -22,12 +22,17 @@ public final class AudioShareClient implements ClientModInitializer {
         AudioShareHud.register();
         KeyMapping.Category category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "main"));
         KeyMapping openKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.mc_audio_share.open", GLFW.GLFW_KEY_J, category));
+                "key.mc_audio_share.open", GLFW.GLFW_KEY_BACKSLASH, category));
+        KeyMapping toggleKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+                "key.mc_audio_share.toggle", GLFW.GLFW_KEY_F8, category));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (openKey.consumeClick()) {
                 if (client.player != null) {
                     client.setScreenAndShow(new AudioShareScreen(null));
                 }
+            }
+            while (toggleKey.consumeClick()) {
+                if (client.player != null) CONTROLLER.toggleQuick();
             }
             long now = System.currentTimeMillis();
             if (CONTROLLER.active() && now - lastStatisticsLog >= 5000) {
@@ -35,6 +40,6 @@ public final class AudioShareClient implements ClientModInitializer {
                 lastStatisticsLog = now;
             }
         });
-        LOGGER.info("MC Audio Share initialized; press J to configure system audio sharing");
+        LOGGER.info("MC Audio Share initialized; open key=backslash, quick share key=F8");
     }
 }

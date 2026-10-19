@@ -1,4 +1,5 @@
 {
   "key.category.mc_audio_share.main": "系统声音分享",
-  "key.mc_audio_share.open": "打开系统声音分享"
+  "key.mc_audio_share.open": "打开系统声音分享",
+  "key.mc_audio_share.toggle": "切换系统声音分享"
 }

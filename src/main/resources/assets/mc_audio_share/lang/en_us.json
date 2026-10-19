@@ -1,4 +1,5 @@
 {
   "key.category.mc_audio_share.main": "System Audio Share",
-  "key.mc_audio_share.open": "Open System Audio Share"
+  "key.mc_audio_share.open": "Open System Audio Share",
+  "key.mc_audio_share.toggle": "Toggle System Audio Sharing"
 }

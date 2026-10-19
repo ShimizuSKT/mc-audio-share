@@ -32,3 +32,5 @@ Native bridge source: [`native/windows/loopback.cpp`](native/windows/loopback.cp
 - This is an experimental Windows-only release; please report results from real game testing.
 
 Licensed under MIT; see [LICENSE](LICENSE).
+
+Vibe coding content included.

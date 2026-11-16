@@ -7,7 +7,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 
-final class WindowsLoopback {
+public final class WindowsLoopback {
     private static final String RESOURCE = "/native/windows-x64/mc_audio_share.dll";
     private static volatile AudioShareController owner;
     private static volatile boolean loaded;
@@ -51,6 +51,12 @@ final class WindowsLoopback {
         if (loaded) stopCapture();
     }
 
+    public static int[] visibleWindowPids() throws Exception {
+        load();
+        return visibleWindowPidsNative();
+    }
+
     private static native void capture(int pid, boolean exclude);
     private static native void stopCapture();
+    private static native int[] visibleWindowPidsNative();
 }

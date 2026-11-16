@@ -4,11 +4,14 @@
 #include <initguid.h>
 #include <mmdeviceapi.h>
 #include <audioclient.h>
+#include <dwmapi.h>
 #include <propidl.h>
 #include <jni.h>
 #include <atomic>
 #include <cstdio>
 #include <cstring>
+#include <vector>
+#include <algorithm>
 
 // These definitions are part of the Windows 10 SDK but absent from some MinGW
 // header releases. Their layout is the public audioclientactivationparams.h ABI.
@@ -16,6 +19,28 @@ struct LoopbackParams { DWORD targetProcessId; int mode; };
 struct ActivationParams { int type; LoopbackParams process; };
 static constexpr wchar_t PROCESS_DEVICE[] = L"VAD\\Process_Loopback";
 static std::atomic<bool> running{false};
+
+static BOOL CALLBACK collectVisibleWindow(HWND window, LPARAM context) {
+    if (!IsWindowVisible(window) || GetWindow(window, GW_OWNER) != nullptr || GetWindowTextLengthW(window) == 0) return TRUE;
+    if ((GetWindowLongPtrW(window, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) != 0) return TRUE;
+    BOOL cloaked = FALSE;
+    if (SUCCEEDED(DwmGetWindowAttribute(window, DWMWA_CLOAKED, &cloaked, sizeof(cloaked))) && cloaked) return TRUE;
+    DWORD pid = 0;
+    GetWindowThreadProcessId(window, &pid);
+    if (pid == 0) return TRUE;
+    auto& pids = *reinterpret_cast<std::vector<jint>*>(context);
+    if (std::find(pids.begin(), pids.end(), static_cast<jint>(pid)) == pids.end()) pids.push_back(static_cast<jint>(pid));
+    return TRUE;
+}
+
+extern "C" JNIEXPORT jintArray JNICALL
+Java_cn_codex_minecraft_audioshare_WindowsLoopback_visibleWindowPidsNative(JNIEnv* env, jclass) {
+    std::vector<jint> pids;
+    EnumWindows(collectVisibleWindow, reinterpret_cast<LPARAM>(&pids));
+    jintArray result = env->NewIntArray(static_cast<jsize>(pids.size()));
+    if (result) env->SetIntArrayRegion(result, 0, static_cast<jsize>(pids.size()), pids.data());
+    return result;
+}
 
 class Completion final : public IActivateAudioInterfaceCompletionHandler {
     std::atomic<ULONG> refs{1};

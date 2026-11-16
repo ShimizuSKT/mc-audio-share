@@ -3,6 +3,7 @@ package cn.codex.minecraft.audioshare.client;
 import cn.codex.minecraft.audioshare.AudioShareClient;
 import cn.codex.minecraft.audioshare.AudioShareController;
 import cn.codex.minecraft.audioshare.AudioShareText;
+import cn.codex.minecraft.audioshare.WindowsLoopback;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
@@ -18,6 +19,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.Arrays;
 import java.util.stream.Stream;
 
 public final class AudioShareScreen extends Screen {
@@ -69,6 +73,8 @@ public final class AudioShareScreen extends Screen {
         String query = filter == null ? "" : filter.getValue().strip().toLowerCase(Locale.ROOT);
         lastFilter = query;
         try (Stream<ProcessHandle> processes = ProcessHandle.allProcesses()) {
+            Set<Long> visiblePids = Arrays.stream(WindowsLoopback.visibleWindowPids())
+                    .mapToLong(Integer::toUnsignedLong).boxed().collect(Collectors.toSet());
             Map<String, List<ProcessCandidate>> groups = new HashMap<>();
             processes.filter(process -> process.pid() != ProcessHandle.current().pid()).forEach(process -> {
                 String command = process.info().command().orElse("");
@@ -83,7 +89,8 @@ public final class AudioShareScreen extends Screen {
                         .add(new ProcessCandidate(process.pid(), parentPid, name, startedAt));
             });
             applications = groups.values().stream()
-                    .map(AudioShareScreen::representative)
+                    .filter(group -> group.stream().anyMatch(candidate -> visiblePids.contains(candidate.pid())))
+                    .map(group -> representative(group, visiblePids))
                     .sorted(Comparator.comparing(Application::name, String.CASE_INSENSITIVE_ORDER)
                             .thenComparingLong(Application::pid))
                     .toList();
@@ -112,10 +119,11 @@ public final class AudioShareScreen extends Screen {
                 ? "screen.stop" : "screen.start")));
     }
 
-    private static Application representative(List<ProcessCandidate> candidates) {
+    private static Application representative(List<ProcessCandidate> candidates, Set<Long> visiblePids) {
         Map<Long, ProcessCandidate> byPid = new HashMap<>();
         for (ProcessCandidate candidate : candidates) byPid.put(candidate.pid(), candidate);
         Map<Long, Integer> treeSizes = new HashMap<>();
+        Map<Long, Integer> visibleWindows = new HashMap<>();
         for (ProcessCandidate candidate : candidates) {
             ProcessCandidate root = candidate;
             int hops = 0;
@@ -123,10 +131,12 @@ public final class AudioShareScreen extends Screen {
                 root = byPid.get(root.parentPid());
             }
             treeSizes.merge(root.pid(), 1, Integer::sum);
+            if (visiblePids.contains(candidate.pid())) visibleWindows.merge(root.pid(), 1, Integer::sum);
         }
         ProcessCandidate main = candidates.stream()
-                .filter(candidate -> treeSizes.containsKey(candidate.pid()))
-                .min(Comparator.<ProcessCandidate>comparingInt(candidate -> -treeSizes.get(candidate.pid()))
+                .filter(candidate -> visibleWindows.containsKey(candidate.pid()))
+                .min(Comparator.<ProcessCandidate>comparingInt(candidate -> -visibleWindows.get(candidate.pid()))
+                        .thenComparingInt(candidate -> -treeSizes.get(candidate.pid()))
                         .thenComparingLong(ProcessCandidate::startedAt)
                         .thenComparingLong(ProcessCandidate::pid))
                 .orElseThrow();

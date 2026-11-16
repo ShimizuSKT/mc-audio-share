@@ -10,4 +10,4 @@ The English and Chinese JARs have the same mod ID (`mc_audio_share`). Install **
 
 This release was compiled and checked without launching Minecraft, as requested. Please report the results of your own in-game test.
 
-The application picker groups processes that use the same executable into one option. It captures the largest process tree (typically the main browser process and its children); separate independent instances of the same executable may require another approach.
+The application picker shows only programs with visible top-level windows and groups processes that use the same executable into one option. It prefers the process tree containing visible windows (typically the main browser process and its children); separate independent instances of the same executable may require another approach.

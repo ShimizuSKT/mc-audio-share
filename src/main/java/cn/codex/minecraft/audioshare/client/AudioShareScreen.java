@@ -11,13 +11,18 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 import java.nio.file.Path;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Stream;
 
 public final class AudioShareScreen extends Screen {
-    private record Application(long pid, String name) { }
+    private record Application(long pid, String name, int processCount) { }
+    private record ProcessCandidate(long pid, long parentPid, String name, long startedAt) { }
 
     private final Screen parent;
     private EditBox filter;
@@ -64,15 +69,21 @@ public final class AudioShareScreen extends Screen {
         String query = filter == null ? "" : filter.getValue().strip().toLowerCase(Locale.ROOT);
         lastFilter = query;
         try (Stream<ProcessHandle> processes = ProcessHandle.allProcesses()) {
-            applications = processes
-                    .filter(process -> process.pid() != ProcessHandle.current().pid())
-                    .map(process -> {
-                        String command = process.info().command().orElse("");
-                        if (command.isBlank()) return null;
-                        String name = Path.of(command).getFileName().toString();
-                        return new Application(process.pid(), name);
-                    })
-                    .filter(app -> app != null && app.name().toLowerCase(Locale.ROOT).contains(query))
+            Map<String, List<ProcessCandidate>> groups = new HashMap<>();
+            processes.filter(process -> process.pid() != ProcessHandle.current().pid()).forEach(process -> {
+                String command = process.info().command().orElse("");
+                if (command.isBlank()) return;
+                Path executable = Path.of(command);
+                String name = executable.getFileName().toString();
+                if (!name.toLowerCase(Locale.ROOT).contains(query)) return;
+                String key = executable.toAbsolutePath().normalize().toString().toLowerCase(Locale.ROOT);
+                long parentPid = process.parent().map(ProcessHandle::pid).orElse(-1L);
+                long startedAt = process.info().startInstant().map(Instant::toEpochMilli).orElse(Long.MAX_VALUE);
+                groups.computeIfAbsent(key, ignored -> new ArrayList<>())
+                        .add(new ProcessCandidate(process.pid(), parentPid, name, startedAt));
+            });
+            applications = groups.values().stream()
+                    .map(AudioShareScreen::representative)
                     .sorted(Comparator.comparing(Application::name, String.CASE_INSENSITIVE_ORDER)
                             .thenComparingLong(Application::pid))
                     .toList();
@@ -95,10 +106,31 @@ public final class AudioShareScreen extends Screen {
             selected = Math.min(selected, applications.size() - 1);
             Application app = applications.get(selected);
             applicationButton.setMessage(Component.literal(AudioShareText.format("screen.app_button",
-                    selected + 1, applications.size(), app.name(), app.pid())));
+                    selected + 1, applications.size(), app.name(), app.processCount())));
         }
         startButton.setMessage(Component.literal(AudioShareText.get(AudioShareClient.CONTROLLER.active()
                 ? "screen.stop" : "screen.start")));
+    }
+
+    private static Application representative(List<ProcessCandidate> candidates) {
+        Map<Long, ProcessCandidate> byPid = new HashMap<>();
+        for (ProcessCandidate candidate : candidates) byPid.put(candidate.pid(), candidate);
+        Map<Long, Integer> treeSizes = new HashMap<>();
+        for (ProcessCandidate candidate : candidates) {
+            ProcessCandidate root = candidate;
+            int hops = 0;
+            while (byPid.containsKey(root.parentPid()) && hops++ < candidates.size()) {
+                root = byPid.get(root.parentPid());
+            }
+            treeSizes.merge(root.pid(), 1, Integer::sum);
+        }
+        ProcessCandidate main = candidates.stream()
+                .filter(candidate -> treeSizes.containsKey(candidate.pid()))
+                .min(Comparator.<ProcessCandidate>comparingInt(candidate -> -treeSizes.get(candidate.pid()))
+                        .thenComparingLong(ProcessCandidate::startedAt)
+                        .thenComparingLong(ProcessCandidate::pid))
+                .orElseThrow();
+        return new Application(main.pid(), main.name(), candidates.size());
     }
 
     private void toggle() {

@@ -27,6 +27,7 @@ Native bridge source: [`native/windows/loopback.cpp`](native/windows/loopback.cp
 ## Limitations
 
 - Audio is transmitted only while Simple Voice Chat is connected and its push-to-talk, mute, and server rules allow it.
+- The application list groups processes by executable path and selects the largest process tree as the capture target. Separate independent instances of the same executable may not all be captured.
 - All-system-audio mode intentionally excludes Minecraft to avoid game-audio feedback.
 - The HUD sharing icon is placed to the right of the existing Simple Voice Chat icon without moving that icon. It follows Simple Voice Chat's **Show HUD Icons** and **Hide Icons** settings; there is no separate display toggle.
 - This is an experimental Windows-only release; please report results from real game testing.

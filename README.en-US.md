@@ -9,3 +9,5 @@ Install Minecraft 26.2, Fabric Loader 0.19.3 or later, Fabric API 0.156.0+26.2 o
 The English and Chinese JARs have the same mod ID (`mc_audio_share`). Install **only one** of them. The English JAR uses English UI text regardless of the Minecraft language setting. Both use the newly supplied sharing and stopped-sharing icons, placed to the right of the unchanged Simple Voice Chat HUD icon. The sharing icon follows Simple Voice Chat's Show HUD Icons and Hide Icons settings, so there is no separate display switch.
 
 This release was compiled and checked without launching Minecraft, as requested. Please report the results of your own in-game test.
+
+The application picker groups processes that use the same executable into one option. It captures the largest process tree (typically the main browser process and its children); separate independent instances of the same executable may require another approach.
